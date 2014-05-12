@@ -1,0 +1,24 @@
+{
+  "name": "jello-command-server",
+  "version": "0.0.1",
+  "description": "launch a embed tomcat server",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/2betop/jello-command-server.git"
+  },
+  "keywords": [
+    "velocity",
+    "server",
+    "tomcat7"
+  ],
+  "author": "2betop",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/2betop/jello-command-server/issues"
+  },
+  "homepage": "https://github.com/2betop/jello-command-server"
+}
