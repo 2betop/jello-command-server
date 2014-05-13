@@ -20,5 +20,9 @@
   "bugs": {
     "url": "https://github.com/2betop/jello-command-server/issues"
   },
-  "homepage": "https://github.com/2betop/jello-command-server"
+  "homepage": "https://github.com/2betop/jello-command-server",
+  "server-jar": "https://github.com/2betop/fis-j2ee-server/releases/download/v1.0rc/j2ee-server-jar-with-dependencies.jar",
+  "dependencies": {
+    "step": "0.0.5"
+  }
 }

@@ -5,7 +5,7 @@
 
 'use strict';
 
-var server = require('./lib/server.js');
+var server = require('./server.js');
 
 exports.name = 'server';
 exports.usage = '<command> [options]';
@@ -55,8 +55,8 @@ exports.register = function(commander) {
             var args = Array.prototype.slice.call(arguments);
             var options = args.pop();
             var cmd = args.shift();
-
             var root = options.root;
+            var opt;
 
             if(root){
                 if(fis.util.exists(root) && !fis.util.isDir(root)){
@@ -69,7 +69,42 @@ exports.register = function(commander) {
             }
 
             switch (cmd) {
-                // todo
+                case 'restart':
+                case 'start':
+                    opt = {};
+                    fis.util.map(options, function(key, value) {
+                        if (typeof value !== 'object' && key[0] !== '_') {
+                            opt[key] = value;
+                        }
+                    });
+
+                    server.start(opt);
+
+                    break;
+
+                case 'stop':
+                    server.stop();
+                    break;
+
+                case 'info':
+                    server.info();
+                    break;
+                case 'open':
+                    server.open();
+                    break;
+                case 'clean':
+                    process.stdout.write(' δ '.bold.yellow);
+                    var now = Date.now();
+                    var user_include = fis.config.get('server.clean.include');
+                    var user_exclude = fis.config.get('server.clean.exclude');
+                    //flow: command => user => default
+                    var include = options.include  ? glob(options.include, root) : (user_include ? glob(user_include, root) : null);
+                    var exclude = options.exclude ? glob(options.exclude, root) : (user_exclude ? glob(user_exclude, root) : /\/WEB-INF\/cgi\//);
+                    fis.util.del(root, include, exclude);
+                    process.stdout.write((Date.now() - now + 'ms').green.bold);
+                    process.stdout.write('\n');
+                    break;
+
                 default :
                     commander.help();
             }
