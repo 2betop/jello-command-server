@@ -76,7 +76,6 @@ _.parseArgs = function(argv) {
     return argv_array;
 };
 
-
 _.getRCFile = function() {
     return fis.project.getTempPath('server/conf.json');
 };
@@ -84,3 +83,65 @@ _.getRCFile = function() {
 _.getPidFile = function() {
     return fis.project.getTempPath('server/pid');
 };
+
+function checkDir(dest) {
+    var path = require('path');
+
+    path = path.dirname(dest);
+
+    fis.util.mkdir(path);
+}
+
+_.download = function(opt, done) {
+    var remote = opt.remote;
+    var dest = opt.dest;
+    var url = require('url');
+    var fs = require('fs');
+    var options = url.parse(remote);
+    var notifiedSize = opt.notifiedSize || 512 * 1024;
+    var http = options.protocol === 'https:' ? require('https') : require('http')
+    var client;
+
+    process.stdout.write('Downloading ' + remote + ' ...\n');
+
+    client = http.get( options, function( res ) {
+        var count = 0,
+            notifiedCount = 0,
+            outFile;
+
+        if ( res.statusCode === 200 ) {
+            checkDir(dest);
+
+            outFile = fs.openSync( dest, 'w' );
+
+            res.on('data', function( data ) {
+                fs.writeSync(outFile, data, 0, data.length, null);
+                count += data.length;
+
+                if ( (count - notifiedCount) > notifiedSize ) {
+                  process.stdout.write('Received ' + Math.floor( count / 1024 ) + 'K...\n');
+                  notifiedCount = count;
+                }
+            });
+
+            res.addListener('end', function() {
+                process.stdout.write('Received ' + Math.floor(count / 1024) + 'K total.\n');
+                fs.closeSync( outFile );
+                done( false );
+            });
+
+        } else if (res.statusCode === 302 && res.headers.location) {
+            client.abort();
+            opt.remote = res.headers.location;
+
+            process.stdout.write('Redirct to ' + opt.remote + '\n');
+            _.download(opt, done);
+        } else {
+            client.abort();
+            done('Error requesting archive')
+        }
+    }).on('error', function(e) {
+        fs.unlinkSync(outFile);
+        done(e.message || 'unkown error');
+    });
+}

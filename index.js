@@ -105,6 +105,10 @@ exports.register = function(commander) {
                     process.stdout.write('\n');
                     break;
 
+                case 'init':
+                    server.init();
+                    break;
+
                 default :
                     commander.help();
             }
@@ -135,4 +139,8 @@ exports.register = function(commander) {
     commander
         .command('clean')
         .description('clean files in document root');
+
+    commander
+        .command('init')
+        .description('install velocity framework in document root');
 };

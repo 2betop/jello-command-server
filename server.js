@@ -45,62 +45,65 @@ function checkJavaEnable() {
     });
 }
 
-function downloadJar(err, callback) {
+function downloadJar() {
     if (fis.util.exists(jarPath)) {
-        callback(err);
+        callback(false);
         return;
     }
 
     var pkg = require('./package.json');
-    var https = require('https');
-    var url = require('url');
-    var dest = jarPath;
-    var fs = fis.util.fs;
 
-    var download = function(remote, done) {
-        var options = url.parse(remote);
-        var client;
+    callback = this;
+    _.download({
+        remote: pkg['server-jar'],
+        dest: jarPath
+    }, function( err ) {
 
-        client = https.get( options, function( res ) {
-            var count = 0,
-                notifiedCount = 0,
-                outFile;
+        err && fatalError(err);
 
-            if ( res.statusCode === 200 ) {
-                outFile = fs.openSync( dest, 'w' );
+        callback(false);
+    });
+}
 
-                res.on('data', function( data ) {
-                    fs.writeSync(outFile, data, 0, data.length, null);
-                    count += data.length;
+function downloadFramework(dest, callback) {
+    dest = dest || fis.project.getTempPath('www');
 
-                    if ( (count - notifiedCount) > 512 * 1024 ) {
-                      process.stdout.write('Received ' + Math.floor( count / 1024 ) + 'K...\n');
-                      notifiedCount = count;
-                    }
-                });
+    var mark = path.join(dest, 'WEB-INF/velocity.properties');
 
-                res.addListener('end', function() {
-                    process.stdout.write('Received ' + Math.floor(count / 1024) + 'K total.\n');
-                    fs.closeSync( outFile );
-                    done( false );
-                });
+    // 通过判断那个文件来决定是否已经安装过。
+    if (fis.util.isFile(mark)) {
+        callback(false);
+        return;
+    }
 
-            } else if (res.statusCode === 302 && res.headers.location) {
-                client.abort();
-                download(res.headers.location, done);
-            } else {
-                client.abort();
-                fatalError('Error requesting archive');
-            }
-        }).on('error', function(e) {
-            fatalError(e.message);
-        });
-    };
+    var pkg = require('./package.json');
+    var url = pkg.framework;
 
-    callback = callback || this;
+    var name = fis.util.md5(url, 8) + fis.util.ext(url).ext;
+    var tmp  = fis.project.getTempPath('downloads', name);
 
-    process.stdout.write('Downloading ' + pkg['server-jar'] + '\n');
-    download(pkg['server-jar'], callback);
+    _.download({
+        dest: tmp,
+        remote: url
+    }, function( err ) {
+        err && fatalError(err);
+
+        var tar = require('tar');
+        var fs = fis.util.fs;
+
+        fs
+            .createReadStream(tmp)
+            .pipe(tar.Extract({ path : dest }))
+            .on('error', function(err){
+                fis.log.error('extract tar file [' + tmp + '] fail, error [' + err + ']');
+            })
+            .on('end', function(){
+                fs.unlinkSync(tmp);
+                callback && callback(false);
+            });
+    })
+
+
 }
 
 function startTomcat( opt ) {
@@ -249,9 +252,20 @@ function options(opt) {
 
 
 exports.start = function( opt, callback ) {
-    step(stopTomcat, checkJavaEnable, downloadJar, function() {
-        startTomcat( opt, this );
-    }, callback);
+    step(stopTomcat, checkJavaEnable, downloadJar,
+        function() {
+            if (opt.root === fis.project.getTempPath('www')) {
+                downloadFramework( opt.root, this );
+                return;
+            }
+            this(false);
+        },
+
+        function() {
+            startTomcat( opt, this );
+        },
+
+        callback);
 };
 
 exports.stop = function(callback) {
@@ -283,3 +297,10 @@ exports.open = function() {
         _.open(root);
     }
 };
+
+
+exports.init = function() {
+    var opt = options();
+
+    downloadFramework(opt.root);
+}
