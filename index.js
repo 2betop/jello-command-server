@@ -51,6 +51,7 @@ exports.register = function(commander) {
         .option('--timeout <seconds>', 'start timeout', parseInt, 15)
         .option('--include <glob>', 'clean include filter', String)
         .option('--exclude <glob>', 'clean exclude filter', String)
+        .option('--debug', 'debug mode')
         .action(function(){
             var args = Array.prototype.slice.call(arguments);
             var options = args.pop();
@@ -109,6 +110,10 @@ exports.register = function(commander) {
                     server.init();
                     break;
 
+                case 'update':
+                    server.update();
+                    break;
+
                 default :
                     commander.help();
             }
@@ -143,4 +148,8 @@ exports.register = function(commander) {
     commander
         .command('init')
         .description('install velocity framework in document root');
+
+    commander
+        .command('update')
+        .description('update velocity framework in document root');
 };

@@ -22,7 +22,7 @@
   },
   "homepage": "https://github.com/2betop/jello-command-server",
   "server-jar": "https://github.com/2betop/fis-j2ee-server/releases/download/v1.0rc/j2ee-server-jar-with-dependencies.jar",
-  "framework": "https://github.com/2betop/fis-velocity-tools/releases/download/v1.0rc/fis-velocity-tools.tar",
+  "framework": "https://github.com/fis-dev/fis-velocity-tools/releases/download/v1.0rc/fis-velocity-tools.tar",
   "dependencies": {
     "step": "0.0.5",
     "tar": "~0.1.19"

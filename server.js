@@ -57,7 +57,7 @@ function downloadJar() {
     _.download({
         remote: pkg['server-jar'],
         dest: jarPath
-    }, function( err ) {
+    }, function(err) {
 
         err && fatalError(err);
 
@@ -65,14 +65,14 @@ function downloadJar() {
     });
 }
 
-function downloadFramework(dest, callback) {
+function downloadFramework(dest, callback, force) {
     dest = dest || fis.project.getTempPath('www');
 
     var mark = path.join(dest, 'WEB-INF/velocity.properties');
 
     // 通过判断那个文件来决定是否已经安装过。
-    if (fis.util.isFile(mark)) {
-        callback(false);
+    if (!force && fis.util.isFile(mark)) {
+        callback && callback(false);
         return;
     }
 
@@ -80,12 +80,12 @@ function downloadFramework(dest, callback) {
     var url = pkg.framework;
 
     var name = fis.util.md5(url, 8) + fis.util.ext(url).ext;
-    var tmp  = fis.project.getTempPath('downloads', name);
+    var tmp = fis.project.getTempPath('downloads', name);
 
     _.download({
         dest: tmp,
         remote: url
-    }, function( err ) {
+    }, function(err) {
         err && fatalError(err);
 
         var tar = require('tar');
@@ -93,11 +93,13 @@ function downloadFramework(dest, callback) {
 
         fs
             .createReadStream(tmp)
-            .pipe(tar.Extract({ path : dest }))
-            .on('error', function(err){
+            .pipe(tar.Extract({
+                path: dest
+            }))
+            .on('error', function(err) {
                 fis.log.error('extract tar file [' + tmp + '] fail, error [' + err + ']');
             })
-            .on('end', function(){
+            .on('end', function() {
                 fs.unlinkSync(tmp);
                 callback && callback(false);
             });
@@ -106,11 +108,11 @@ function downloadFramework(dest, callback) {
 
 }
 
-function startTomcat( opt ) {
+function startTomcat(opt) {
 
     process.stdout.write('starting fis-server.\n');
 
-    var timeout = Math.max(opt.timeout * 1000, 5000); delete opt.timeout;
+    var timeout = Math.max(opt.timeout * 1000, 5000);
     var errMsg = 'fis-server fails to start at port [' + opt.port + '], error: ';
     var args = [
         '-jar', jarPath
@@ -118,62 +120,100 @@ function startTomcat( opt ) {
     var ready = false;
     var log = '';
 
-    fis.util.map(opt, function(key, value){
-        args.push('--' + key, String(value));
+    fis.util.map(opt, function(key, value) {
+        if (~['port', 'base', 'root'].indexOf(key)) {
+            args.push('--' + key, String(value));
+        }
     });
 
-    args.push('--base', fis.project.getTempPath() );
+    args.push('--base', fis.project.getTempPath());
 
-    var server = spawn('java', args, { cwd : __dirname, detached: true });
+    var server = spawn('java', args, {
+        cwd: __dirname,
+        detached: true
+    });
 
-    server.stderr.on('data', function(chunk){
+    opt.debug && server.stdout.on('data', function(chunk) {
+        process.stdout.write(chunk);
+    });
+
+    server.stderr.on('data', function(chunk) {
         //console.log(chunk.toString('utf8'));
-        if(ready) return;
+        opt.debug && process.stdout.write(chunk);
+
+        if (ready) return;
         chunk = chunk.toString('utf8');
         log += chunk;
-        process.stdout.write('.');
-        if(chunk.indexOf('Exception') > 0) {
+        opt.debug || process.stdout.write('.');
+
+        if (chunk.indexOf('Exception') > 0) {
             process.stdout.write(' fail\n');
-            try { process.kill(server.pid, 'SIGKILL'); } catch(e){}
+            try {
+                process.kill(server.pid, 'SIGKILL');
+            } catch (e) {}
             var match = chunk.match(/BindException:?\s+([^\r\n]+)/i);
-            if(match){
+            if (match) {
                 errMsg += match[1];
             } else {
                 errMsg += 'unknown';
             }
             console.log(log);
             fis.log.error(errMsg);
-        } else if(chunk.indexOf('Starting ProtocolHandler') > 0){
+        } else if (chunk.indexOf('Starting ProtocolHandler') > 0) {
             ready = true;
-            process.stdout.write(' at port [' + opt.port + ']\n');
+            opt.debug || process.stdout.write(' at port [' + opt.port + ']\n');
 
 
-            setTimeout(function(){
-                _.open('http://127.0.0.1' + (opt.port == 80 ? '/' : ':' + opt.port + '/'), function(){
-                    process.exit();
+            setTimeout(function() {
+                _.open('http://127.0.0.1' + (opt.port == 80 ? '/' : ':' + opt.port + '/'), function() {
+                    opt.debug || process.exit();
                 });
             }, 200);
         }
     });
-    server.on('error', function(err){
-        try { process.kill(server.pid, 'SIGKILL'); } catch(e){}
+    server.on('error', function(err) {
+        try {
+            process.kill(server.pid, 'SIGKILL');
+        } catch (e) {}
         fis.log.error(err);
     });
     process.on('SIGINT', function(code) {
-        try { process.kill(server.pid, 'SIGKILL'); } catch(e){}
+        try {
+            process.kill(server.pid, 'SIGKILL');
+        } catch (e) {}
     });
 
-    server.unref();
+    opt.debug || server.unref();
     fis.util.write(_.getPidFile(), server.pid);
 
-    setTimeout(function(){
+    opt.debug || setTimeout(function() {
         process.stdout.write(' fail\n');
-        if(log) console.log(log);
+        if (log) console.log(log);
         fis.log.error(errMsg + 'timeout');
     }, timeout);
 
     opt['process'] = 'java';
     options(opt);
+
+    updateFisDebugSetting(opt.debug);
+}
+
+function updateFisDebugSetting(debug) {
+    var file = fis.project.getTempPath('www/WEB-INF/velocity.properties'),
+        content, value;
+
+    if (fis.util.exists(file)) {
+        content = fis.util.fs.readFileSync(file, "utf8");
+        value = 'fis.debug = ' + (debug ? 'true' : 'false');
+
+        if (~content.indexOf("fis.debug")) {
+            content = content.replace(/fis\.debug\s*=.*?$/img, value);
+        }else {
+            content += '\n' + value;
+        }
+
+        fis.util.write(file, content);
+    }
 }
 
 function stopTomcat() {
@@ -194,13 +234,13 @@ function stopTomcat() {
             list = spawn('ps', ['-A']);
         }
 
-        list.stdout.on('data', function (chunk) {
+        list.stdout.on('data', function(chunk) {
             msg += chunk.toString('utf-8').toLowerCase();
         });
 
         list.on('exit', function() {
             msg.split(/[\r\n]+/).forEach(function(item) {
-                var reg = new RegExp('\\b'+opt['process']+'\\b', 'i');
+                var reg = new RegExp('\\b' + opt['process'] + '\\b', 'i');
 
                 if (reg.test(item)) {
                     var iMatch = item.match(/\d+/);
@@ -209,7 +249,7 @@ function stopTomcat() {
                             process.kill(pid, 'SIGINT');
                             process.kill(pid, 'SIGKILL');
                         } catch (e) {}
-                        process.stdout.write('shutdown '+opt['process']+' process [' + iMatch[0] + ']\n');
+                        process.stdout.write('shutdown ' + opt['process'] + ' process [' + iMatch[0] + ']\n');
                     }
                 }
             });
@@ -217,11 +257,11 @@ function stopTomcat() {
             fis.util.fs.unlinkSync(tmp);
 
             if (done) {
-                done( false, opt );
+                done(false, opt);
             }
         });
 
-        list.on('error', function (e) {
+        list.on('error', function(e) {
             if (isWin) {
                 fis.log.error('fail to execute `tasklist` command, please add your system path (eg: C:\\Windows\\system32, you should replace `C` with your system disk) in %PATH%');
             } else {
@@ -251,21 +291,19 @@ function options(opt) {
 }
 
 
-exports.start = function( opt, callback ) {
+exports.start = function(opt) {
     step(stopTomcat, checkJavaEnable, downloadJar,
         function() {
             if (opt.root === fis.project.getTempPath('www')) {
-                downloadFramework( opt.root, this );
+                downloadFramework(opt.root, this);
                 return;
             }
             this(false);
         },
 
         function() {
-            startTomcat( opt, this );
-        },
-
-        callback);
+            startTomcat(opt, this);
+        });
 };
 
 exports.stop = function(callback) {
@@ -277,7 +315,7 @@ exports.stop = function(callback) {
 //server info
 exports.info = function() {
     var conf = _.getRCFile();
-    if(fis.util.isFile(conf)){
+    if (fis.util.isFile(conf)) {
         conf = fis.util.readJSON(conf);
         _.printObject(conf);
     } else {
@@ -288,9 +326,9 @@ exports.info = function() {
 //server open document directory
 exports.open = function() {
     var conf = _.getRCFile();
-    if(fis.util.isFile(conf)){
+    if (fis.util.isFile(conf)) {
         conf = fis.util.readJSON(conf);
-        if(fis.util.isDir(conf.root)){
+        if (fis.util.isDir(conf.root)) {
             _.open(conf.root);
         }
     } else {
@@ -303,4 +341,10 @@ exports.init = function() {
     var opt = options();
 
     downloadFramework(opt.root);
+}
+
+exports.update = function() {
+    var opt = options();
+
+    downloadFramework(opt.root, null, true);
 }
