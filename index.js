@@ -45,6 +45,30 @@ exports.register = function(commander) {
         return fis.util.realpath(root);
     }
 
+    //support glob: a**,b**,/usr**,/*/*
+    function glob(str, prefix) {
+        var globArr = str.split(',');
+        var group = [];
+        var s_reg;
+        globArr.forEach(function(g) {
+            if (g.length > 0) {
+                s_reg = fis.util.glob(g).toString();
+                //replace
+                // '/^' => ''
+                // '$/i' => ''
+                s_reg = s_reg.substr(2, s_reg.length - 5);
+                group.push(s_reg);
+            }
+        });
+        prefix = prefix || '';
+        if (prefix) {
+            s_reg = fis.util.glob(prefix).toString();
+            // '/^' => '', '%/i' => ''
+            prefix = s_reg.substr(2, s_reg.length - 5);
+        }
+        return new RegExp('^'+ prefix + '(' + group.join('|') + ')$', 'i');
+    }
+
     commander
         .option('-p, --port <int>', 'server listen port', parseInt, process.env.FIS_SERVER_PORT || 8080)
         .option('--root <path>', 'document root', getRoot, serverRoot)
