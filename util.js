@@ -141,7 +141,6 @@ _.download = function(opt, done) {
             done('Error requesting archive')
         }
     }).on('error', function(e) {
-        fs.unlinkSync(outFile);
         done(e.message || 'unkown error');
     });
 }
