@@ -324,7 +324,7 @@ exports.info = function() {
 };
 
 //server open document directory
-exports.open = function() {
+exports.open = function(root) {
     var conf = _.getRCFile();
     if (fis.util.isFile(conf)) {
         conf = fis.util.readJSON(conf);
