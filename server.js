@@ -199,15 +199,15 @@ function startTomcat(opt) {
 }
 
 function updateFisDebugSetting(debug) {
-    var file = fis.project.getTempPath('www/WEB-INF/velocity.properties'),
+    var file = fis.project.getTempPath('www/WEB-INF/fis.properties'),
         content, value;
 
     if (fis.util.exists(file)) {
         content = fis.util.fs.readFileSync(file, "utf8");
-        value = 'fis.debug = ' + (debug ? 'true' : 'false');
+        value = 'debug = ' + (debug ? 'true' : 'false');
 
-        if (~content.indexOf("fis.debug")) {
-            content = content.replace(/fis\.debug\s*=.*?$/img, value);
+        if (~content.indexOf("debug")) {
+            content = content.replace(/debug\s*=.*?$/img, value);
         }else {
             content += '\n' + value;
         }

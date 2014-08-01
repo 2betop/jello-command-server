@@ -1,6 +1,6 @@
 {
   "name": "jello-command-server",
-  "version": "0.0.8",
+  "version": "0.0.9",
   "description": "launch a embed tomcat server",
   "main": "index.js",
   "scripts": {
