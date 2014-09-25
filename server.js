@@ -146,7 +146,7 @@ function startTomcat(opt) {
         log += chunk;
         opt.debug || process.stdout.write('.');
 
-        if (chunk.indexOf('Exception') > 0) {
+        if (!opt.debug && chunk.indexOf('Exception') > 0) {
             process.stdout.write(' fail\n');
             try {
                 process.kill(server.pid, 'SIGKILL');
