@@ -75,6 +75,7 @@ exports.register = function(commander) {
         .option('--timeout <seconds>', 'start timeout', parseInt, 15)
         .option('--include <glob>', 'clean include filter', String)
         .option('--exclude <glob>', 'clean exclude filter', String)
+        .option('--webapp <string>', 'set webapp path.', String)
         .option('--debug', 'debug mode')
         .action(function(){
             var args = Array.prototype.slice.call(arguments);

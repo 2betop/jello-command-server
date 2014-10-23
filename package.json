@@ -1,6 +1,6 @@
 {
   "name": "jello-command-server",
-  "version": "0.0.11",
+  "version": "0.0.12",
   "description": "launch a embed tomcat server",
   "main": "index.js",
   "scripts": {
@@ -21,7 +21,7 @@
     "url": "https://github.com/2betop/jello-command-server/issues"
   },
   "homepage": "https://github.com/2betop/jello-command-server",
-  "server-jar": "http://fisstatic.duapp.com/jello/server/server-jar/0.1.0/j2ee-server-jar-with-dependencies.jar",
+  "server-jar": "http://fisstatic.duapp.com/jello/server/server-jar/0.1.1/j2ee-server-jar-with-dependencies.jar",
   "framework": "http://fisstatic.duapp.com/jello/server/framework/0.1.1/fis-velocity-tools.tar",
   "dependencies": {
     "step": "0.0.5",

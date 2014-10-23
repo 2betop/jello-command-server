@@ -121,7 +121,7 @@ function startTomcat(opt) {
     var log = '';
 
     fis.util.map(opt, function(key, value) {
-        if (~['port', 'base', 'root'].indexOf(key)) {
+        if (~['port', 'base', 'root', 'webapp'].indexOf(key)) {
             args.push('--' + key, String(value));
         }
     });
