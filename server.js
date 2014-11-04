@@ -165,7 +165,7 @@ function startTomcat(opt) {
 
 
             setTimeout(function() {
-                _.open('http://127.0.0.1' + (opt.port == 80 ? '/' : ':' + opt.port + '/' + opt.webapp), function() {
+                _.open('http://127.0.0.1' + (opt.port == 80 ? '/' : ':' + opt.port + '/' + (opt.webapp || '')), function() {
                     opt.debug || process.exit();
                 });
             }, 200);
